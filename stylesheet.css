@@ -51,7 +51,7 @@ button:hover {
 .top-right {
   position: fixed;
   bottom: unset;
-  top: 0;
+  top: 2%;
   right: 2%;
 }
 
