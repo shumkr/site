@@ -14,11 +14,39 @@ body {
 }
 
 a {
-  color: gray;
+  color: white;
 }
 
 a:hover {
-  color: white;
+  color: gray;
+}
+
+a h1:hover {
+  color: #c8c8c8;
+}
+
+a i:hover {
+  color: #c8c8c8;
+}
+
+button {
+    background-color: #1c1c1c;
+    color: white;
+    border: 1px solid white;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+button:hover {
+    background-color: white;
+    color: black;
+}
+
+.crop {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+    max-width: 100%;
 }
 
 .container {
@@ -30,6 +58,7 @@ a:hover {
     top: 0;
     right: 0;
   }
+
 
 .fa-brands {
     color: white;
