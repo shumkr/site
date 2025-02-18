@@ -35,9 +35,10 @@ button {
     background-color: #1c1c1c;
     color: white;
     border: 1px solid #a230c8;
-    padding: 6px 18px;
+    padding: 8px 20px;
     border-radius: 8px;
-    margin-bottom: 6px;;
+    margin-bottom: 6px;
+    font-size: 14px;
 }
 
 button:hover {
@@ -50,6 +51,7 @@ button:hover {
 details {
   background-color: #1c1c1c;
   display: inline;
+  border: 1px solid #1c1c1c;
 }
 
 details > summary {
