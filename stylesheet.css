@@ -49,8 +49,6 @@ button:hover {
 
 details {
   background-color: #1c1c1c;
-  padding: 6px 18px;
-  border-radius: 8px;
   display: inline;
 }
 
@@ -65,9 +63,14 @@ details > summary::-webkit-details-marker {
   display: none;
 }
 
-details:hover{
-  background-color: #a230c8;
-  box-shadow: 0 0 10px #a230c8
+details > summary:hover{
+  text-shadow: #a230c8 0 0 15px;
+  color: white;
+}
+
+details[open] summary{
+  color: white;
+  text-decoration: underline;
 }
 
 /* Classes for positioning elements */
