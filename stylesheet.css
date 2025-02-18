@@ -22,24 +22,57 @@ a:hover {
 }
 
 a h1:hover {
-  color: #c8c8c8;
+  color: white;
+  text-shadow: 0 0 10px white;
 }
 
 a i:hover {
-  color: #c8c8c8;
+  color: white;
+  text-shadow: 0 0 10px white;
 }
 
 button {
     background-color: #1c1c1c;
     color: white;
-    border: 1px solid white;
-    padding: 8px 12px;
+    border: 1px solid #a230c8;
+    padding: 6px 18px;
     border-radius: 8px;
+    margin-bottom: 6px;;
 }
 
 button:hover {
-    background-color: white;
-    color: black;
+    background-color: #1c1c1c;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 0 10px #a230c8
+}
+
+details {
+  background-color: #1c1c1c;
+  padding: 6px 18px;
+  border-radius: 8px;
+  display: inline;
+}
+
+details > summary {
+  list-style: none;
+  color: #1c1c1c;
+  font-size: 14px;
+  cursor: pointer
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details:hover{
+  background-color: #a230c8;
+  box-shadow: 0 0 10px #a230c8
+}
+
+/* Classes for positioning elements */
+.container {
+  position: relative;
 }
 
 .top-left {
@@ -63,10 +96,7 @@ button:hover {
   }
 }
 
-.container {
-    position: relative;
-  }
-
+/* Classes for styling elements */
 .fa-brands {
     color: white;
     font-size: 30px;
