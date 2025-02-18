@@ -13,3 +13,17 @@ body {
     line-height: 1.6;
 }
 
+.container {
+    position: relative;
+  }
+
+.top-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+.fa-brands {
+    color: white;
+    font-size: 25px;
+}
