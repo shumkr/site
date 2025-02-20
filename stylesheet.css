@@ -12,7 +12,8 @@ a {
 }
 
 a:hover {
-  color: gray;
+  color: white;
+  text-shadow: 0 0 10px white;
 }
 
 a h1:hover {
@@ -50,7 +51,7 @@ details {
 
 details > summary {
   list-style: none;
-  color: #1c1c1c;
+  color: #353535;
   font-size: 14px;
   cursor: pointer
 }
@@ -67,6 +68,23 @@ details > summary:hover{
 details[open] summary{
   color: white;
   text-decoration: underline;
+}
+
+img {
+  border-radius: 15px;
+}
+
+.box{
+  background-color: #3f3f3f;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #0d0d0d;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 75%;
+  height: 50%;
 }
 
 .container {
@@ -98,4 +116,18 @@ details[open] summary{
 .fa-brands {
     color: white;
     font-size: 30px;
+}
+
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+} 
+
+.bottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
