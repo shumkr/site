@@ -80,11 +80,11 @@ img {
   border-radius: 10px;
   box-shadow: 0 0 10px #0d0d0d;
   position: absolute;
-  top: 50%;
   left: 50%;
+  bottom: -20%;
   transform: translate(-50%, -50%);
-  width: 75%;
-  height: 50%;
+  width: 80%;
+  height: 65%;
 }
 
 .container {
@@ -97,20 +97,20 @@ img {
   left: 0;
 }
 
-.top-right {
+.socials {
   position: fixed;
   bottom: unset;
   top: 2%;
   right: 2%;
-}
-
-@media screen and (max-width: 470px) {
-  .top-right {
+  
+  @media screen and (max-width: 470px) {
     position: fixed;
     top: unset;
     bottom: 2%;
   }
+
 }
+
 
 /* Classes for styling elements */
 .fa-brands {
@@ -130,4 +130,19 @@ img {
   bottom: 0;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 10px;
+  line-height: 0.8;
+  margin-bottom: 1%;
+  display: block;
+
+  @media screen and (max-width: 470px) {
+    display: none;
+  }
 }
