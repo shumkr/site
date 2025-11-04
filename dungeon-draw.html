@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- NOTE: THIS WAS ALL CREATED BY GOOGLE GEMINI 2.5 PRO WITH CANVAS-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Draw</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple playing card style */
+        .card {
+            width: 100px;
+            height: 140px;
+            border-radius: 8px;
+            background-color: white;
+            border: 1px solid #aaa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 8px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .card-back {
+            background-color: #4a90e2;
+            background-image: 
+                linear-gradient(45deg, #4281cb 25%, transparent 25%, transparent 75%, #4281cb 75%, #4281cb), 
+                linear-gradient(-45deg, #4281cb 25%, transparent 25%, transparent 75%, #4281cb 75%, #4281cb);
+            background-size: 20px 20px;
+            border: 2px solid white;
+        }
+        .card.red { color: #d0021b; }
+        .card.black { color: #000; }
+        .card-top { transform: rotate(0deg); }
+        .card-bottom { transform: rotate(180deg); }
+
+        /* HP Bar */
+        #hp-bar-inner {
+            transition: width 0.3s ease-out;
+        }
+
+        /* Modal backdrop */
+        .modal-backdrop {
+            transition: opacity 0.2s ease-in-out;
+        }
+        
+        /* Message log transitions */
+        .log-message {
+            transition: all 0.3s ease-out;
+            transform-origin: top;
+        }
+        .log-message-enter {
+            opacity: 0;
+            transform: scaleY(0.8);
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="w-full max-w-4xl mx-auto p-4 md:p-6 bg-gray-900 rounded-2xl shadow-2xl border border-gray-700">
+
+        <!-- ===== 1. CLASS SELECTION SCREEN ===== -->
+        <div id="class-selection-screen">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-white">Dungeon Draw</h1>
+            <p class="text-center text-lg text-gray-400 mb-8">Choose your adventurer:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- King -->
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg text-center hover:border-blue-500 transition-all">
+                    <div class="text-5xl mb-4">👑</div>
+                    <h2 class="text-2xl font-bold mb-2">The King</h2>
+                    <p class="text-gray-400 mb-4">Starts with <strong>25 HP</strong>.</p>
+                    <p class="text-gray-300 mb-6"><strong>Parry (1/game):</strong> After you "bust" in a duel, you can ignore it and restart your duel hand.</p>
+                    <button onclick="game.initGame('King')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Choose King</button>
+                </div>
+                <!-- Queen -->
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg text-center hover:border-purple-500 transition-all">
+                    <div class="text-5xl mb-4">👸</div>
+                    <h2 class="text-2xl font-bold mb-2">The Queen</h2>
+                    <p class="text-gray-400 mb-4">Starts with <strong>20 HP</strong>.</p>
+                    <p class="text-gray-300 mb-6"><strong>Mana Shield (Passive):</strong> The first time you take damage from a <strong>Trap</strong> each floor, ignore it.</p>
+                    <button onclick="game.initGame('Queen')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Choose Queen</button>
+                </div>
+                <!-- Jack -->
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg text-center hover:border-green-500 transition-all">
+                    <div class="text-5xl mb-4">🃏</div>
+                    <h2 class="text-2xl font-bold mb-2">The Jack</h2>
+                    <p class="text-gray-400 mb-4">Starts with <strong>18 HP</strong>.</p>
+                    <p class="text-gray-300 mb-6"><strong>Disarm (Active):</strong> When you hit a <strong>Trap</strong>, guess if the next card is Red or Black to avoid it.</p>
+                    <button onclick="game.initGame('Jack')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Choose Jack</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 2. MAIN GAME SCREEN ===== -->
+        <div id="game-screen" class="hidden">
+            <!-- Player Stats Header -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <!-- Player Info -->
+                <div class="flex items-center gap-4">
+                    <div id="player-icon" class="text-5xl"></div>
+                    <div>
+                        <h2 id="player-class" class="text-2xl font-bold"></h2>
+                        <div id="player-special-ability" class="text-gray-400"></div>
+                    </div>
+                </div>
+
+                <!-- HP Bar -->
+                <div class="w-full md:w-1/2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-lg">Health</span>
+                        <span id="hp-text" class="font-mono text-xl">25 / 25</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-6 border-2 border-gray-600">
+                        <div id="hp-bar-inner" class="bg-red-600 h-full rounded-full" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Boss Progress -->
+                <div class="text-center">
+                    <div class="text-lg font-bold">Guardians Defeated</div>
+                    <div id="boss-progress" class="text-4xl font-bold text-yellow-400">0 / 4</div>
+                </div>
+            </div>
+
+            <!-- Game Area -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Left: Deck & Items -->
+                <div class="md:col-span-1 flex flex-col items-center gap-6">
+                    <!-- Deck -->
+                    <div class="w-full">
+                        <h3 class="text-xl font-bold text-center mb-3">Dungeon Deck</h3>
+                        <div class="flex justify-center items-center gap-4">
+                            <button id="draw-card-button" onclick="game.drawCard()" class="card card-back hover:scale-105 transform transition-transform" title="Draw Card"></button>
+                            <div class="text-center">
+                                <div id="deck-count" class="text-5xl font-bold">52</div>
+                                <div class="text-gray-400">Cards Left</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Items -->
+                    <div class="w-full bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-xl font-bold text-center mb-4">Inventory</h3>
+                        <div class="flex justify-around gap-4">
+                            <!-- Dagger -->
+                            <button id="item-dagger" onclick="game.useItem('dagger')" class="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-700 border border-gray-600 w-24 text-gray-500" disabled>
+                                <span class="text-4xl">🗡️</span>
+                                <span class="font-bold">Dagger</span>
+                                <span class="text-xs text-center">(+5 in Duel)</span>
+                            </button>
+                            <!-- Shield -->
+                            <button id="item-shield" onclick="game.useItem('shield')" class="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-700 border border-gray-600 w-24 text-gray-500" disabled>
+                                <span class="text-4xl">🛡️</span>
+                                <span class="font-bold">Shield</span>
+                                <span class="text-xs text-center">(Block Dmg)</span>
+                            </button>
+                            <!-- Elixir -->
+                            <button id="item-elixir" onclick="game.useItem('elixir')" class="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-700 border border-gray-600 w-24 text-gray-500" disabled>
+                                <span class="text-4xl">🧪</span>
+                                <span class="font-bold">Elixir</span>
+                                <span class="text-xs text-center">(+15 HP)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Game Log -->
+                <div class="md:col-span-2 bg-gray-800 p-4 rounded-lg border border-gray-700 min-h-[300px]">
+                    <h3 class="text-xl font-bold mb-4">Game Log</h3>
+                    <div id="message-log" class="h-80 overflow-y-auto space-y-2 pr-2">
+                        <!-- Messages will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 3. MODALS ===== -->
+
+        <!-- Combat Modal -->
+        <div id="combat-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 modal-backdrop">
+            <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-2xl border border-gray-700 shadow-xl">
+                <h2 id="combat-title" class="text-3xl font-bold text-center mb-2">Monster Appeared!</h2>
+                <div id="combat-subtitle" class-></div>
+                
+                <!-- Monster Area -->
+                <div class="my-6">
+                    <h3 class="text-lg font-bold text-gray-400">Monster's Hand</h3>
+                    <div class="flex justify-center items-center gap-3 p-4 bg-gray-800 rounded-lg min-h-[170px] border border-gray-700">
+                        <div id="monster-hand" class="flex flex-wrap justify-center gap-3">
+                            <!-- Monster cards go here -->
+                        </div>
+                        <div class="ml-4 pl-4 border-l border-gray-600">
+                            <div class="text-gray-400">Total</div>
+                            <div id="monster-total" class="text-5xl font-bold">?</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Area -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-400">Your Hand</h3>
+                    <div class="flex justify-center items-center gap-3 p-4 bg-gray-800 rounded-lg min-h-[170px] border border-gray-700">
+                        <div id="player-hand" class="flex flex-wrap justify-center gap-3">
+                            <!-- Player cards go here -->
+                        </div>
+                        <div class="ml-4 pl-4 border-l border-gray-600">
+                            <div class="text-gray-400">Total</div>
+                            <div id="player-total" class="text-5xl font-bold">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Combat Controls -->
+                <div id="combat-controls" class="flex justify-center gap-4 mt-6">
+                    <button id="hit-button" onclick="game.playerHit()" class="text-xl font-bold bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-lg transition-colors">Hit</button>
+                    <button id="stand-button" onclick="game.playerStand()" class="text-xl font-bold bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg transition-colors">Stand</button>
+                    <button id="parry-button" onclick="game.useKingParry()" class="hidden text-xl font-bold bg-yellow-500 hover:bg-yellow-600 text-black py-3 px-8 rounded-lg transition-colors">Use Parry!</button>
+                </div>
+
+                <!-- Combat Result -->
+                <div id="combat-result" class="text-center mt-6 hidden">
+                    <p id="combat-result-text" class="text-2xl font-bold mb-4"></p>
+                    <button id="combat-continue-button" onclick="game.endCombat()" class="text-lg font-bold bg-gray-600 hover:bg-gray-700 text-white py-2 px-6 rounded-lg transition-colors">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disarm Modal -->
+        <div id="disarm-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 modal-backdrop">
+            <div class="bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-700 shadow-xl text-center">
+                <h2 class="text-3xl font-bold text-center mb-4">Disarm Trap!</h2>
+                <p class="text-lg text-gray-300 mb-6">You found a trap! Use your **Disarm** skill.<br>Guess the color of the next card in the deck:</p>
+                <div class="flex justify-center gap-4">
+                    <button onclick="game.resolveDisarm('Red')" class="text-xl font-bold bg-red-600 hover:bg-red-700 text-white py-3 px-10 rounded-lg transition-colors">Guess Red</button>
+                    <button onclick="game.resolveDisarm('Black')" class="text-xl font-bold bg-gray-700 hover:bg-gray-600 text-white py-3 px-10 rounded-lg transition-colors">Guess Black</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 modal-backdrop">
+            <div class="bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-700 shadow-xl text-center">
+                <h2 id="game-over-title" class="text-4xl font-bold text-center mb-4">Game Over</h2>
+                <p id="game-over-message" class="text-lg text-gray-300 mb-8">You have been defeated.</p>
+                <button onclick="game.restartGame()" class="text-xl font-bold bg-blue-600 hover:bg-blue-700 text-white py-3 px-10 rounded-lg transition-colors">Play Again</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== JAVASCRIPT GAME LOGIC ===== -->
+    <script>
+        // --- DOM Elements ---
+        const $ = (selector) => document.getElementById(selector);
+        
+        const elements = {
+            classSelectionScreen: $('class-selection-screen'),
+            gameScreen: $('game-screen'),
+            
+            playerIcon: $('player-icon'),
+            playerClass: $('player-class'),
+            playerSpecial: $('player-special-ability'),
+            hpText: $('hp-text'),
+            hpBarInner: $('hp-bar-inner'),
+            bossProgress: $('boss-progress'),
+            
+            drawCardButton: $('draw-card-button'),
+            deckCount: $('deck-count'),
+            itemDagger: $('item-dagger'),
+            itemShield: $('item-shield'),
+            itemElixir: $('item-elixir'),
+            messageLog: $('message-log'),
+            
+            combatModal: $('combat-modal'),
+            combatTitle: $('combat-title'),
+            combatSubtitle: $('combat-subtitle'),
+            monsterHand: $('monster-hand'),
+            monsterTotal: $('monster-total'),
+            playerHand: $('player-hand'),
+            playerTotal: $('player-total'),
+            combatControls: $('combat-controls'),
+            hitButton: $('hit-button'),
+            standButton: $('stand-button'),
+            parryButton: $('parry-button'),
+            combatResult: $('combat-result'),
+            combatResultText: $('combat-result-text'),
+            combatContinueButton: $('combat-continue-button'),
+            
+            disarmModal: $('disarm-modal'),
+            gameOverModal: $('game-over-modal'),
+            gameOverTitle: $('game-over-title'),
+            gameOverMessage: $('game-over-message'),
+        };
+
+        // --- Game Logic ---
+        const game = {
+            // --- 1. Game State ---
+            state: {
+                gameState: 'classSelection', // classSelection, playing, combat, disarm, gameOver
+                deck: [],
+                discardPile: [], // For reshuffling
+                player: {
+                    hp: 0,
+                    maxHp: 0,
+                    class: '', // King, Queen, Jack
+                    specialUsed: false,
+                    queenShieldAvailable: true,
+                    shieldActive: false,
+                    items: {
+                        dagger: false,
+                        shield: false,
+                        elixir: false,
+                    }
+                },
+                acesDefeated: 0,
+                duel: {
+                    active: false,
+                    monsterCard: null,
+                    monsterValue: 0,
+                    monsterDraws: 0,
+                    playerHand: [],
+                    monsterHand: [],
+                    playerTotal: 0,
+                    monsterTotal: 0,
+                    isBoss: false,
+                    bossHits: 0,
+                    bossHitsNeeded: 0,
+                    acesToReshuffle: [],
+                    daggerUsed: false,
+                }
+            },
+
+            // --- 2. Initialization ---
+            initGame(chosenClass) {
+                // Reset player state
+                this.state.player.class = chosenClass;
+                this.state.player.specialUsed = false;
+                this.state.player.queenShieldAvailable = true;
+                this.state.player.shieldActive = false;
+                this.state.player.items = { dagger: false, shield: false, elixir: false };
+                this.state.acesDefeated = 0;
+                this.state.discardPile = [];
+                
+                switch (chosenClass) {
+                    case 'King':
+                        this.state.player.hp = 25;
+                        this.state.player.maxHp = 25;
+                        elements.playerIcon.textContent = '👑';
+                        elements.playerSpecial.textContent = 'Parry available';
+                        break;
+                    case 'Queen':
+                        this.state.player.hp = 20;
+                        this.state.player.maxHp = 20;
+                        elements.playerIcon.textContent = '👸';
+                        elements.playerSpecial.textContent = 'Mana Shield ready';
+                        break;
+                    case 'Jack':
+                        this.state.player.hp = 18;
+                        this.state.player.maxHp = 18;
+                        elements.playerIcon.textContent = '🃏';
+                        elements.playerSpecial.textContent = 'Disarm ready';
+                        break;
+                }
+                
+                // Create and shuffle deck
+                this.createDeck();
+                this.shuffleDeck();
+
+                // Set up UI
+                elements.classSelectionScreen.classList.add('hidden');
+                elements.gameScreen.classList.remove('hidden');
+                elements.playerClass.textContent = `The ${chosenClass}`;
+                this.clearLog();
+                this.addLogMessage(`Welcome, ${chosenClass}! Your adventure begins.`, 'info');
+                
+                // Set game state
+                this.state.gameState = 'playing';
+                this.updateUI();
+            },
+            
+            createDeck() {
+                this.state.deck = [];
+                const suits = ['♥', '♦', '♠', '♣'];
+                const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+                for (const suit of suits) {
+                    for (const value of values) {
+                        this.state.deck.push({ suit, value });
+                    }
+                }
+            },
+            
+            shuffleDeck() {
+                // Fisher-Yates Shuffle
+                let deck = this.state.deck;
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+            },
+
+            restartGame() {
+                elements.gameOverModal.classList.add('hidden');
+                elements.gameScreen.classList.add('hidden');
+                elements.classSelectionScreen.classList.remove('hidden');
+                this.state.gameState = 'classSelection';
+            },
+
+            // --- 3. Core Game Loop ---
+            drawCard() {
+                if (this.state.gameState !== 'playing') return;
+
+                if (this.state.deck.length === 0) {
+                    if (!this.reshuffleDeck()) {
+                        this.gameOver(false, 'You ran out of time...');
+                        return;
+                    }
+                }
+                
+                const card = this.state.deck.pop();
+                this.resolveCard(card);
+            },
+
+            // --- 4. Card Resolution ---
+            resolveCard(card) {
+                const cardName = `${card.value} of ${card.suit}`;
+                this.addLogMessage(`You draw a ${cardName}.`, 'draw');
+                
+                // Resolve card effect
+                switch (card.suit) {
+                    case '♥': this.handleHeal(card); break;
+                    case '♦': this.handleTreasure(card); break;
+                    case '♣': this.handleTrap(card); break;
+                    case '♠': this.startCombat(card); break;
+                }
+                
+                if (card.value === 'A') {
+                    this.startBossFight(card);
+                }
+
+                // Add non-Ace cards to the discard pile
+                if (card.value !== 'A') {
+                    this.state.discardPile.push(card);
+                }
+
+                this.updateUI();
+            },
+
+            reshuffleDeck() {
+                if (this.state.discardPile.length === 0) {
+                    this.addLogMessage('The deck and discard pile are empty! The dungeon is quiet...', 'error');
+                    return false; // Can't reshuffle
+                }
+                this.addLogMessage('The deck is empty! Reshuffling the discard pile...', 'info');
+                this.state.deck = this.state.discardPile;
+                this.state.discardPile = [];
+                this.shuffleDeck(); // Shuffles this.state.deck
+                this.updateUI(); // Update deck count
+                return true;
+            },
+
+            // --- 5. Card Handlers ---
+            getCardValue(card, isDuel = false) {
+                if (card.value === 'A') return isDuel ? 11 : 0; // Aces are bosses, no base value
+                if (['J', 'Q', 'K'].includes(card.value)) return 10;
+                return parseInt(card.value);
+            },
+            
+            handleHeal(card) {
+                const healAmount = this.getCardValue(card);
+                const oldHP = this.state.player.hp;
+                this.state.player.hp = Math.min(this.state.player.maxHp, this.state.player.hp + healAmount);
+                const actualHeal = this.state.player.hp - oldHP;
+                if (actualHeal > 0) {
+                    this.addLogMessage(`You find a fountain. You heal for ${actualHeal} HP.`, 'heal');
+                } else {
+                    this.addLogMessage('You find a fountain, but you are already at full health.', 'info');
+                }
+            },
+            
+            handleTreasure(card) {
+                const value = card.value;
+                if (value === 'J') {
+                    if (!this.state.player.items.dagger) {
+                        this.state.player.items.dagger = true;
+                        this.addLogMessage('You find a sharp 🗡️ Dagger! Use it in a duel to add +5 to your total.', 'item');
+                    } else {
+                        this.addLogMessage('You find another Dagger, but you already have one.', 'info');
+                    }
+                } else if (value === 'Q') {
+                     if (!this.state.player.items.shield) {
+                        this.state.player.items.shield = true;
+                        this.addLogMessage('You find a sturdy 🛡️ Shield! Use it to block the next source of damage.', 'item');
+                    } else {
+                        this.addLogMessage('You find another Shield, but you already have one.', 'info');
+                    }
+                } else if (value === 'K') {
+                    if (!this.state.player.items.elixir) {
+                        this.state.player.items.elixir = true;
+                        this.addLogMessage('You find a bubbling 🧪 Elixir! Use it to heal 15 HP.', 'item');
+                    } else {
+                        this.addLogMessage('You find another Elixir, but you already have one.', 'info');
+                    }
+                } else {
+                    this.addLogMessage('You enter an empty room. Nothing of interest here.', 'info');
+                }
+            },
+            
+            handleTrap(card) {
+                const damage = this.getCardValue(card);
+                
+                // Check for Jack's Disarm
+                if (this.state.player.class === 'Jack') {
+                    this.state.gameState = 'disarm';
+                    this.state.pendingTrapCard = card; // Store the trap
+                    elements.disarmModal.classList.remove('hidden');
+                    return; // Stop here, wait for player input
+                }
+                
+                // Check for Queen's Mana Shield
+                if (this.state.player.class === 'Queen' && this.state.player.queenShieldAvailable) {
+                    this.state.player.queenShieldAvailable = false;
+                    elements.playerSpecial.textContent = 'Mana Shield used';
+                    this.addLogMessage('Your Mana Shield absorbs the trap! You take 0 damage.', 'special');
+                    return;
+                }
+                
+                // Standard trap
+                this.addLogMessage(`You spring a trap! You take ${damage} damage.`, 'damage');
+                this.takeDamage(damage);
+            },
+            
+            resolveDisarm(guess) {
+                elements.disarmModal.classList.add('hidden');
+                const trapCard = this.state.pendingTrapCard;
+                const trapDamage = this.getCardValue(trapCard);
+                
+                // Add trap card to discard
+                this.state.discardPile.push(trapCard);
+                
+                if (this.state.deck.length === 0) {
+                    if (!this.reshuffleDeck()) {
+                        this.addLogMessage('You try to disarm, but the dungeon is empty... The trap hits.', 'damage');
+                        this.state.gameState = 'playing';
+                        this.takeDamage(trapDamage);
+                        this.updateUI();
+                        return;
+                    }
+                }
+                
+                const nextCard = this.state.deck.pop();
+                const nextCardColor = (nextCard.suit === '♥' || nextCard.suit === '♦') ? 'Red' : 'Black';
+                const cardName = `${nextCard.value} of ${nextCard.suit}`;
+
+                if (guess === nextCardColor) {
+                    this.addLogMessage(`Success! You guessed ${guess}. The next card was a ${cardName}. You disarm the trap, but must still resolve the new card!`, 'special');
+                    // Resolve the new card instead of discarding it
+                    this.resolveCard(nextCard);
+                } else {
+                    this.addLogMessage(`Failure! You guessed ${guess}, but the next card was a ${cardName}. You take ${trapDamage} damage...`, 'damage');
+                    this.takeDamage(trapDamage);
+                    
+                    if (this.state.player.hp > 0) {
+                        this.addLogMessage(`...and you must also resolve the ${cardName}!`, 'draw');
+                        // Resolve the new card
+                        this.resolveCard(nextCard);
+                    }
+                }
+                
+                this.state.gameState = 'playing';
+                this.state.pendingTrapCard = null;
+                this.updateUI();
+            },
+            
+            takeDamage(amount) {
+                // Check for Shield item
+                if (this.state.player.shieldActive) {
+                    this.state.player.shieldActive = false;
+                    this.state.player.items.shield = false; // Item is used up
+                    this.addLogMessage('Your 🛡️ Shield blocks all the damage!', 'item');
+                    this.updateUI();
+                    return;
+                }
+                
+                this.state.player.hp -= amount;
+                if (this.state.player.hp <= 0) {
+                    this.state.player.hp = 0;
+                    this.updateUI();
+                    this.gameOver(false, 'Your health has reached 0.');
+                }
+            },
+            
+            // --- 6. Combat System ---
+            startCombat(card) {
+                this.state.gameState = 'combat';
+                this.state.duel.active = true;
+                this.state.duel.isBoss = false;
+                this.state.duel.monsterCard = card;
+                this.state.duel.monsterValue = this.getCardValue(card);
+                
+                const val = this.getCardValue(card);
+                if (val <= 5) this.state.duel.monsterDraws = 1;
+                else if (val <= 9) this.state.duel.monsterDraws = 2;
+                else this.state.duel.monsterDraws = 3; // 10, J, Q, K
+                
+                elements.combatTitle.textContent = 'Monster Appeared!';
+                elements.combatSubtitle.innerHTML = `It's a ${card.value} of ♠. It will take <strong>${this.state.duel.monsterValue} damage</strong> to defeat and draws <strong>${this.state.duel.monsterDraws} cards</strong>.`;
+                this.resetDuelHands();
+                this.showCombatUI(true);
+            },
+            
+            startBossFight(card) {
+                this.state.gameState = 'combat';
+                this.state.duel.active = true;
+                this.state.duel.isBoss = true;
+                this.state.duel.monsterCard = card;
+                this.state.duel.bossHits = 0;
+                this.state.acesDefeated++;
+                
+                // Reset Queen's shield for the new "floor"
+                if (this.state.player.class === 'Queen') {
+                    this.state.player.queenShieldAvailable = true;
+                    elements.playerSpecial.textContent = 'Mana Shield ready';
+                }
+                
+                if (this.state.acesDefeated < 4) {
+                    // Guardian 1, 2, or 3
+                    this.state.duel.bossHitsNeeded = 2;
+                    this.state.duel.monsterDraws = 3;
+                    this.state.duel.monsterValue = 5; // Damage per lost duel
+                    elements.combatTitle.textContent = `Guardian Appeared! (Boss ${this.state.acesDefeated}/4)`;
+                    elements.combatSubtitle.innerHTML = `You must win <strong>2 duels</strong> to defeat it. It draws <strong>3 cards</strong>. You take <strong>5 damage</strong> if you lose a duel.`;
+                } else {
+                    // The Dungeon Lord
+                    this.state.duel.bossHitsNeeded = 3;
+                    this.state.duel.monsterDraws = -1; // Special "dealer" logic
+                    this.state.duel.monsterValue = 7; // Damage per lost duel
+                    elements.combatTitle.textContent = `The Dungeon Lord! (Final Boss)`;
+                    elements.combatSubtitle.innerHTML = `You must win <strong>3 duels</strong> to defeat it. It hits on 16 or less. You take <strong>7 damage</strong> if you lose a duel.`;
+                }
+                
+                this.resetDuelHands();
+                this.showCombatUI(true);
+            },
+            
+            playerHit() {
+                if (this.state.deck.length === 0) {
+                    if (!this.reshuffleDeck()) {
+                        this.addLogMessage('You try to hit, but the deck is empty!', 'error');
+                        return;
+                    }
+                }
+                
+                const card = this.state.deck.pop();
+                if (card.value === 'A') {
+                    this.state.duel.acesToReshuffle.push(card);
+                }
+                
+                this.state.duel.playerHand.push(card);
+                this.state.duel.playerTotal = this.calculateHandTotal(this.state.duel.playerHand);
+                
+                this.updateCombatUI();
+
+                if (this.state.duel.playerTotal === 21) {
+                    this.addLogMessage(`You draw a ${card.value}${card.suit}. BLACKJACK! You instantly win the duel.`, 'special');
+                    this.updateCombatUI();
+                    this.showCombatUI(false);
+                    this.state.duel.monsterTotal = 0; // Ensure monster loses
+                    
+                    // Use a short delay so player sees the "21"
+                    setTimeout(() => {
+                        this.resolveDuel();
+                    }, 1000);
+                    return;
+                }
+                
+                if (this.state.duel.playerTotal > 21) {
+                    // Player Busts
+                    this.addLogMessage(`You draw a ${card.value}${card.suit}. Your total is ${this.state.duel.playerTotal}. You BUST!`, 'damage');
+                    
+                    // King's Parry Check
+                    if (this.state.player.class === 'King' && !this.state.player.specialUsed) {
+                        elements.hitButton.classList.add('hidden');
+                        elements.standButton.classList.add('hidden');
+                        elements.parryButton.classList.remove('hidden');
+                    } else {
+                        // Auto-stand on bust if no parry
+                        setTimeout(() => this.playerStand(true), 500);
+                    }
+                } else {
+                    this.addLogMessage(`You draw a ${card.value}${card.suit}. Your total is ${this.state.duel.playerTotal}.`, 'draw');
+                }
+            },
+            
+            playerStand(didBust = false) {
+                if (didBust) {
+                    this.state.duel.playerTotal = 0;
+                }
+                
+                // Dagger check
+                if (this.state.duel.daggerUsed) {
+                    this.state.duel.playerTotal += 5;
+                    this.addLogMessage(`You use your 🗡️ Dagger, adding +5! Your final total is ${this.state.duel.playerTotal}.`, 'item');
+                } else {
+                    if (this.state.duel.playerTotal > 0) {
+                        this.addLogMessage(`You stand with a total of ${this.state.duel.playerTotal}.`, 'info');
+                    }
+                }
+                
+                this.showCombatUI(false); // Hide Hit/Stand buttons
+                this.monsterTurn();
+            },
+            
+            monsterTurn() {
+                const isFinalBoss = this.state.duel.isBoss && this.state.acesDefeated === 4;
+                let draws = isFinalBoss ? 0 : this.state.duel.monsterDraws;
+                
+                const drawMonsterCard = () => {
+                    if (this.state.deck.length === 0) {
+                        if (!this.reshuffleDeck()) {
+                            this.addLogMessage('Monster tries to draw, but the deck is empty!', 'error');
+                            return null;
+                        }
+                    }
+                    const card = this.state.deck.pop();
+                    if (card.value === 'A') {
+                        this.state.duel.acesToReshuffle.push(card);
+                    }
+                    this.state.duel.monsterHand.push(card);
+                    this.state.duel.monsterTotal = this.calculateHandTotal(this.state.duel.monsterHand);
+                    this.updateCombatUI();
+                    this.addLogMessage(`Monster draws ${card.value}${card.suit}. Total: ${this.state.duel.monsterTotal}`, 'info');
+                    return card;
+                };
+                
+                // Set timeout to create a "dealer" feel
+                setTimeout(() => {
+                    const monsterLogic = () => {
+                        // Final Boss Logic (Dealer)
+                        if (isFinalBoss) {
+                            if (this.state.duel.monsterTotal < 17) {
+                                if (drawMonsterCard() !== null) {
+                                    setTimeout(monsterLogic, 1000); // Draw again
+                                } else {
+                                    this.resolveDuel(); // Deck empty
+                                }
+                            } else {
+                                // Stand on 17+ or Bust
+                                if (this.state.duel.monsterTotal > 21) {
+                                    this.addLogMessage('The Dungeon Lord BUSTS!', 'special');
+                                    this.state.duel.monsterTotal = 0;
+                                } else {
+                                    this.addLogMessage(`The Dungeon Lord stands with ${this.state.duel.monsterTotal}.`, 'info');
+                                }
+                                this.resolveDuel();
+                            }
+                        } 
+                        // Standard Monster / Guardian Logic (Fixed Draws)
+                        else {
+                            if (draws > 0) {
+                                if (drawMonsterCard() !== null) {
+                                    draws--;
+                                    setTimeout(monsterLogic, 1000); // Draw again
+                                } else {
+                                    this.resolveDuel(); // Deck empty
+                                }
+                            } else {
+                                // Done drawing
+                                if (this.state.duel.monsterTotal > 21) {
+                                    this.addLogMessage('Monster BUSTS!', 'special');
+                                    this.state.duel.monsterTotal = 0;
+                                }
+                                this.resolveDuel();
+                            }
+                        }
+                    };
+                    monsterLogic(); // Start the monster's turn
+                }, 1000);
+            },
+            
+            resolveDuel() {
+                const playerTotal = this.state.duel.playerTotal;
+                const monsterTotal = this.state.duel.monsterTotal;
+                let resultMessage = '';
+
+                // Check for PUSH (Tie)
+                if (playerTotal === monsterTotal) {
+                    resultMessage = `PUSH! (${playerTotal} vs ${monsterTotal}). The duel restarts.`;
+                    this.addLogMessage(resultMessage, 'info');
+                    
+                    elements.combatResultText.textContent = resultMessage;
+                    elements.combatResult.classList.remove('hidden');
+                    elements.combatContinueButton.onclick = () => this.resetDuelHands();
+                    return;
+                }
+
+                let playerWins = playerTotal > monsterTotal;
+
+                if (playerWins) {
+                    resultMessage = `You win the duel! (${playerTotal} vs ${monsterTotal})`;
+                    this.addLogMessage(resultMessage, 'heal');
+                    
+                    if (this.state.duel.isBoss) {
+                        this.state.duel.bossHits++;
+                        if (this.state.duel.bossHits === this.state.duel.bossHitsNeeded) {
+                            // BOSS DEFEATED
+                            resultMessage = this.state.acesDefeated === 4 ? 'YOU DEFEATED THE DUNGEON LORD!' : 'You defeated the Guardian!';
+                            elements.combatResultText.textContent = resultMessage;
+                            elements.combatResult.classList.remove('hidden');
+                            elements.combatContinueButton.onclick = () => this.endCombat(true); // Pass 'true' for boss defeated
+                        } else {
+                            // Hit landed, needs more
+                            resultMessage = `You land a hit! (${this.state.duel.bossHits} / ${this.state.duel.bossHitsNeeded})`;
+                            elements.combatResultText.textContent = resultMessage;
+                            elements.combatResult.classList.remove('hidden');
+                            elements.combatContinueButton.onclick = () => this.resetDuelHands(); // Start next duel round
+                        }
+                    } else {
+                        // STANDARD MONSTER DEFEATED
+                        elements.combatResultText.textContent = resultMessage;
+                        elements.combatResult.classList.remove('hidden');
+                        elements.combatContinueButton.onclick = () => this.endCombat();
+                    }
+                    
+                } else {
+                    // Player Loses Duel
+                    const damage = this.state.duel.monsterValue;
+                    resultMessage = `You lose the duel! (${playerTotal} vs ${monsterTotal}). You take ${damage} damage.`;
+                    this.addLogMessage(resultMessage, 'damage');
+                    this.takeDamage(damage);
+                    
+                    if (this.state.player.hp <= 0) {
+                        // Game Over - handled by takeDamage
+                        elements.combatModal.classList.add('hidden');
+                        return;
+                    }
+                    
+                    if (this.state.duel.isBoss) {
+                        resultMessage = `The Guardian hits you! (${this.state.duel.bossHits} / ${this.state.duel.bossHitsNeeded}). You take ${damage} damage.`;
+                        elements.combatResultText.textContent = resultMessage;
+                        elements.combatResult.classList.remove('hidden');
+                        elements.combatContinueButton.onclick = () => this.resetDuelHands(); // Start next duel round
+                    } else {
+                        // STANDARD MONSTER WINS
+                        elements.combatResultText.textContent = `You lose! You take ${damage} damage.`;
+                        elements.combatResult.classList.remove('hidden');
+                        elements.combatContinueButton.onclick = () => this.endCombat();
+                    }
+                }
+            },
+            
+            endCombat(bossWasDefeated = false) {
+                // Discard monster card
+                this.state.discardPile.push(this.state.duel.monsterCard);
+                
+                // Discard hands (non-Aces)
+                this.state.discardPile.push(...this.state.duel.playerHand.filter(c => c.value !== 'A'));
+                this.state.discardPile.push(...this.state.duel.monsterHand.filter(c => c.value !== 'A'));
+
+                // Reshuffle any drawn Aces
+                if (this.state.duel.acesToReshuffle.length > 0) {
+                    this.addLogMessage(`Shuffling ${this.state.duel.acesToReshuffle.length} Ace(s) back into the deck.`, 'info');
+                    this.state.deck.push(...this.state.duel.acesToReshuffle);
+                    this.shuffleDeck();
+                }
+                
+                // Reset duel state
+                this.state.duel = { active: false, acesToReshuffle: [] };
+                this.state.gameState = 'playing';
+                
+                // Hide modal
+                elements.combatModal.classList.add('hidden');
+                elements.combatResult.classList.add('hidden');
+                
+                // Check for game win
+                if (bossWasDefeated && this.state.acesDefeated === 4) {
+                    this.gameOver(true, 'You have defeated all four Guardians and escaped the dungeon!');
+                }
+                
+                this.updateUI();
+            },
+            
+            resetDuelHands() {
+                this.state.duel.playerHand = [];
+                this.state.duel.monsterHand = [];
+                this.state.duel.playerTotal = 0;
+                this.state.duel.monsterTotal = 0;
+                this.state.duel.daggerUsed = false;
+                
+                this.showCombatUI(true); // Show controls
+                this.updateCombatUI();
+                
+                // Auto-draw first card for player
+                this.addLogMessage('A new duel begins. You draw your first card...', 'info');
+                this.playerHit();
+            },
+            
+            calculateHandTotal(hand) {
+                let total = 0;
+                let aceCount = 0;
+                
+                // Implement full blackjack Ace logic (1 or 11)
+                total = 0;
+                aceCount = 0;
+                for (const card of hand) {
+                    if (card.value === 'A') {
+                        aceCount++;
+                        total += 11;
+                    } else {
+                        total += this.getCardValue(card, true);
+                    }
+                }
+                
+                while (total > 21 && aceCount > 0) {
+                    total -= 10; // Change an Ace from 11 to 1
+                    aceCount--;
+                }
+                
+                return total;
+            },
+            
+            // --- 7. Hero & Item Abilities ---
+            useKingParry() {
+                this.addLogMessage('You PARRY the blow! Your hand is reset.', 'special');
+                this.state.player.specialUsed = true;
+                elements.playerSpecial.textContent = 'Parry used';
+                
+                // Reset player's hand and continue turn
+                this.state.duel.playerHand = [];
+                this.state.duel.playerTotal = 0;
+                this.updateCombatUI();
+                this.showCombatUI(true); // Show Hit/Stand again
+                elements.parryButton.classList.add('hidden');
+            },
+            
+            useItem(item) {
+                switch(item) {
+                    case 'dagger':
+                        if (this.state.gameState === 'combat' && !this.state.duel.daggerUsed) {
+                            this.state.duel.daggerUsed = true;
+                            this.state.player.items.dagger = false;
+                            this.addLogMessage('You ready your 🗡️ Dagger! +5 will be added when you stand.', 'item');
+                        }
+                        break;
+                    case 'shield':
+                        if (this.state.gameState === 'playing' && !this.state.player.shieldActive) {
+                            this.state.player.shieldActive = true;
+                            // Shield doesn't get "used" until damage is blocked
+                            this.addLogMessage('You raise your 🛡️ Shield! It will block the next source of damage.', 'item');
+                        }
+                        break;
+                    case 'elixir':
+                         if (this.state.gameState === 'playing' || this.state.gameState === 'combat') { // Allow elixir use anytime
+                            this.state.player.items.elixir = false;
+                            this.addLogMessage('You drink the 🧪 Elixir!', 'item');
+                            this.handleHeal({ value: '15' }); // Heal 15
+                         }
+                        break;
+                }
+                this.updateUI();
+            },
+
+            // --- 8. Game Over ---
+            gameOver(isWin, message) {
+                this.state.gameState = 'gameOver';
+                elements.gameOverModal.classList.remove('hidden');
+                if (isWin) {
+                    elements.gameOverTitle.textContent = 'You Win!';
+                    elements.gameOverMessage.textContent = message;
+                } else {
+                    elements.gameOverTitle.textContent = 'Game Over';
+                    elements.gameOverMessage.textContent = message;
+                }
+            },
+            
+            // --- 8. UI Rendering ---
+            updateUI() {
+                // HP
+                elements.hpText.textContent = `${this.state.player.hp} / ${this.state.player.maxHp}`;
+                elements.hpBarInner.style.width = `${(this.state.player.hp / this.state.player.maxHp) * 100}%`;
+                
+                // Deck
+                elements.deckCount.textContent = this.state.deck.length;
+                elements.drawCardButton.disabled = this.state.gameState !== 'playing';
+
+                // Bosses
+                elements.bossProgress.textContent = `${this.state.acesDefeated} / 4`;
+                
+                // Items
+                this.updateItemButton(elements.itemDagger, this.state.player.items.dagger, this.state.gameState === 'combat' && !this.state.duel.daggerUsed);
+                this.updateItemButton(elements.itemShield, this.state.player.items.shield, (this.state.gameState === 'playing' || this.state.gameState === 'combat') && !this.state.player.shieldActive);
+                this.updateItemButton(elements.itemElixir, this.state.player.items.elixir, this.state.gameState === 'playing' || this.state.gameState === 'combat');
+                
+                if (this.state.player.shieldActive) {
+                    elements.itemShield.classList.add('ring-2', 'ring-blue-500');
+                } else {
+                    elements.itemShield.classList.remove('ring-2', 'ring-blue-500');
+                }
+            },
+            
+            updateItemButton(button, hasItem, isUsable) {
+                if (hasItem) {
+                    button.classList.remove('text-gray-500', 'bg-gray-700');
+                    button.classList.add('text-white', 'bg-gray-600');
+                    if (isUsable) {
+                        button.disabled = false;
+                        button.classList.add('hover:bg-blue-600', 'cursor-pointer');
+                    } else {
+                        button.disabled = true;
+                        button.classList.remove('hover:bg-blue-600', 'cursor-pointer');
+                    }
+                } else {
+                    button.disabled = true;
+                    button.classList.remove('text-white', 'bg-gray-600', 'hover:bg-blue-600', 'cursor-pointer');
+                    button.classList.add('text-gray-500', 'bg-gray-700');
+                }
+            },
+            
+            updateCombatUI() {
+                // Player Hand
+                elements.playerHand.innerHTML = '';
+                this.state.duel.playerHand.forEach(card => {
+                    elements.playerHand.appendChild(this.createCardElement(card));
+                });
+                elements.playerTotal.textContent = this.state.duel.playerTotal;
+                
+                // Monster Hand
+                elements.monsterHand.innerHTML = '';
+                this.state.duel.monsterHand.forEach(card => {
+                    elements.monsterHand.appendChild(this.createCardElement(card));
+                });
+                
+                if (this.state.duel.monsterHand.length === 0) {
+                    elements.monsterTotal.textContent = '?';
+                } else {
+                    elements.monsterTotal.textContent = this.state.duel.monsterTotal;
+                }
+                
+                this.updateUI(); // Update deck count, etc.
+            },
+            
+            showCombatUI(showControls) {
+                elements.combatModal.classList.remove('hidden');
+                elements.combatResult.classList.add('hidden');
+                
+                if (showControls) {
+                    elements.combatControls.classList.remove('hidden');
+                    elements.hitButton.classList.remove('hidden');
+                    elements.standButton.classList.remove('hidden');
+                    elements.parryButton.classList.add('hidden');
+                    // Disable dagger if not in combat or already used
+                    this.updateItemButton(elements.itemDagger, this.state.player.items.dagger, !this.state.duel.daggerUsed);
+                } else {
+                    elements.combatControls.classList.add('hidden');
+                    // Disable item use during monster turn
+                    this.updateItemButton(elements.itemDagger, this.state.player.items.dagger, false);
+                }
+            },
+            
+            createCardElement(card) {
+                const cardEl = document.createElement('div');
+                const isRed = card.suit === '♥' || card.suit === '♦';
+                cardEl.className = `card text-sm ${isRed ? 'red' : 'black'}`;
+                cardEl.innerHTML = `
+                    <div class="card-top">${card.value}${card.suit}</div>
+                    <div class="text-3xl text-center">${card.suit}</div>
+                    <div class="card-bottom">${card.value}${card.suit}</div>
+                `;
+                return cardEl;
+            },
+            
+            // --- 9. Logging ---
+            addLogMessage(message, type = 'info') {
+                const log = elements.messageLog;
+                const msgEl = document.createElement('div');
+                let icon = 'ℹ️';
+                let color = 'text-gray-300';
+                
+                switch (type) {
+                    case 'draw':    icon = '➡️'; color = 'text-white'; break;
+                    case 'heal':    icon = '💚'; color = 'text-green-400'; break;
+                    case 'damage':  icon = '💔'; color = 'text-red-400'; break;
+                    case 'item':    icon = '⭐'; color = 'text-yellow-400'; break;
+                    case 'special': icon = '✨'; color = 'text-blue-400'; break;
+                    case 'error':   icon = '❗'; color = 'text-red-600'; break;
+                }
+                
+                msgEl.className = `log-message log-message-enter ${color}`;
+                msgEl.innerHTML = `<span class="mr-2">${icon}</span> ${message}`;
+                
+                log.appendChild(msgEl);
+                
+                // Force reflow for transition
+                void msgEl.offsetWidth; 
+                msgEl.classList.remove('log-message-enter');
+
+                // Auto-scroll
+                log.scrollTop = log.scrollHeight;
+            },
+            
+            clearLog() {
+                elements.messageLog.innerHTML = '';
+            }
+        };
+
+        // Expose game to window for buttons (simple setup)
+        window.game = game;
+
+    </script>
+</body>
+</html>
+
