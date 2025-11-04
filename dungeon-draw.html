@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- NOTE: THIS WAS ALL CREATED BY GOOGLE GEMINI 2.5 PRO WITH CANVAS-->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dungeon Draw</title>
@@ -564,9 +563,12 @@
                 const cardName = `${nextCard.value} of ${nextCard.suit}`;
 
                 if (guess === nextCardColor) {
-                    this.addLogMessage(`Success! You guessed ${guess}. The next card was a ${cardName}. You disarm the trap. The revealed card is discarded.`, 'special');
-                    // SUCCESS: Discard the new card, take no damage
-                    this.state.discardPile.push(nextCard);
+                    this.addLogMessage(`Success! You guessed ${guess}. The next card was a ${cardName}. You disarm the trap.`, 'special');
+                    // SUCCESS: Take no damage, but still resolve the next card.
+                    if (this.state.player.hp > 0) { // Check just in case
+                        this.addLogMessage(`You must now resolve the ${cardName}!`, 'draw');
+                        this.resolveCard(nextCard);
+                    }
                 } else {
                     this.addLogMessage(`Failure! You guessed ${guess}, but the next card was a ${cardName}. You take ${trapDamage} damage...`, 'damage');
                     this.takeDamage(trapDamage);
@@ -1138,9 +1140,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
