@@ -7,7 +7,7 @@
     <title>Dungeon Draw</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+    <style> 
         /* Custom Styles */
         body {
             font-family: 'Inter', sans-serif;
@@ -166,7 +166,7 @@
                             <button id="item-elixir" onclick="game.useItem('elixir')" class="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-700 border border-gray-600 w-24 text-gray-500" disabled>
                                 <span class="text-4xl">🧪</span>
                                 <span class="font-bold">Elixir</span>
-                                <span class="text-xs text-center">(+15 HP)</span>
+                                <span class="text-xs text-center">(Full Heal)</span>
                             </button>
                         </div>
                     </div>
@@ -433,20 +433,24 @@
                 const cardName = `${card.value} of ${card.suit}`;
                 this.addLogMessage(`You draw a ${cardName}.`, 'draw');
                 
-                // Resolve card effect
-                switch (card.suit) {
-                    case '♥': this.handleHeal(card); break;
-                    case '♦': this.handleTreasure(card); break;
-                    case '♣': this.handleTrap(card); break;
-                    case '♠': this.startCombat(card); break;
-                }
-                
+                // --- RE-ORDERED LOGIC ---
+
+                // 1. Check for Boss first.
                 if (card.value === 'A') {
                     this.startBossFight(card);
-                }
-
-                // Add non-Ace cards to the discard pile
-                if (card.value !== 'A') {
+                    // Note: We DO NOT add Ace to discard pile here.
+                    // It's handled by the boss fight logic (reshuffled into deck).
+                
+                // 2. If not a boss, check for other suits.
+                } else {
+                    switch (card.suit) {
+                        case '♥': this.handleHeal(card); break;
+                        case '♦': this.handleTreasure(card); break;
+                        case '♣': this.handleTrap(card); break;
+                        case '♠': this.startCombat(card); break;
+                    }
+                    
+                    // Add non-Ace cards to the discard pile
                     this.state.discardPile.push(card);
                 }
 
@@ -501,10 +505,10 @@
                     } else {
                         this.addLogMessage('You find another Shield, but you already have one.', 'info');
                     }
-                } else if (value === 'K') {
+                } else if (value === 'K') { // <-- FIXED: Added '}' above and changed 'if' to 'else if'
                     if (!this.state.player.items.elixir) {
                         this.state.player.items.elixir = true;
-                        this.addLogMessage('You find a bubbling 🧪 Elixir! Use it to heal 15 HP.', 'item');
+                        this.addLogMessage('You find a bubbling 🧪 Elixir! Use it to fully restore your HP.', 'item');
                     } else {
                         this.addLogMessage('You find another Elixir, but you already have one.', 'info');
                     }
@@ -560,9 +564,9 @@
                 const cardName = `${nextCard.value} of ${nextCard.suit}`;
 
                 if (guess === nextCardColor) {
-                    this.addLogMessage(`Success! You guessed ${guess}. The next card was a ${cardName}. You disarm the trap, but must still resolve the new card!`, 'special');
-                    // Resolve the new card instead of discarding it
-                    this.resolveCard(nextCard);
+                    this.addLogMessage(`Success! You guessed ${guess}. The next card was a ${cardName}. You disarm the trap. The revealed card is discarded.`, 'special');
+                    // SUCCESS: Discard the new card, take no damage
+                    this.state.discardPile.push(nextCard);
                 } else {
                     this.addLogMessage(`Failure! You guessed ${guess}, but the next card was a ${cardName}. You take ${trapDamage} damage...`, 'damage');
                     this.takeDamage(trapDamage);
@@ -864,11 +868,10 @@
                 this.state.discardPile.push(...this.state.duel.playerHand.filter(c => c.value !== 'A'));
                 this.state.discardPile.push(...this.state.duel.monsterHand.filter(c => c.value !== 'A'));
 
-                // Reshuffle any drawn Aces
+                // Add duel Aces back to the main deck (they aren't "discarded")
                 if (this.state.duel.acesToReshuffle.length > 0) {
-                    this.addLogMessage(`Shuffling ${this.state.duel.acesToReshuffle.length} Ace(s) back into the deck.`, 'info');
+                    this.addLogMessage(`Returning ${this.state.duel.acesToReshuffle.length} Ace(s) from the duel to the deck.`, 'info');
                     this.state.deck.push(...this.state.duel.acesToReshuffle);
-                    this.shuffleDeck();
                 }
                 
                 // Reset duel state
@@ -879,9 +882,28 @@
                 elements.combatModal.classList.add('hidden');
                 elements.combatResult.classList.add('hidden');
                 
-                // Check for game win
-                if (bossWasDefeated && this.state.acesDefeated === 4) {
-                    this.gameOver(true, 'You have defeated all four Guardians and escaped the dungeon!');
+                // Check for game win or guardian defeated
+                if (bossWasDefeated) {
+                    this.addLogMessage('You defeated a Guardian! The entire dungeon reshuffles...', 'special');
+                    
+                    // --- NEW LOGIC ---
+                    // Combine deck and discard pile
+                    this.state.deck.push(...this.state.discardPile);
+                    this.state.discardPile = []; // Empty the discard pile
+                    
+                    this.shuffleDeck(); // Shuffle the full deck
+                    // --- END NEW LOGIC ---
+    
+                    if (this.state.acesDefeated === 4) {
+                        this.gameOver(true, 'You have defeated all four Guardians and escaped the dungeon!');
+                    }
+                } else {
+                    // This is a normal monster defeat.
+                    // We only shuffle if duel Aces were returned, otherwise no shuffle needed.
+                    if (this.state.duel.acesToReshuffle.length > 0) {
+                        this.addLogMessage('Shuffling the deck...', 'info');
+                        this.shuffleDeck();
+                    }
                 }
                 
                 this.updateUI();
@@ -959,8 +981,8 @@
                     case 'elixir':
                          if (this.state.gameState === 'playing' || this.state.gameState === 'combat') { // Allow elixir use anytime
                             this.state.player.items.elixir = false;
-                            this.addLogMessage('You drink the 🧪 Elixir!', 'item');
-                            this.handleHeal({ value: '15' }); // Heal 15
+                            this.state.player.hp = this.state.player.maxHp; // Set to full health
+                            this.addLogMessage('You drink the 🧪 Elixir! Your health is fully restored.', 'item');
                          }
                         break;
                 }
@@ -996,7 +1018,7 @@
                 // Items
                 this.updateItemButton(elements.itemDagger, this.state.player.items.dagger, this.state.gameState === 'combat' && !this.state.duel.daggerUsed);
                 this.updateItemButton(elements.itemShield, this.state.player.items.shield, (this.state.gameState === 'playing' || this.state.gameState === 'combat') && !this.state.player.shieldActive);
-                this.updateItemButton(elements.itemElixir, this.state.player.items.elixir, this.state.gameState === 'playing' || this.state.gameState === 'combat');
+                this.updateItemButton(elements.itemElixir, this.state.player.items.elixir, (this.state.gameState === 'playing' || this.state.gameState === 'combat') && this.state.player.hp < this.state.player.maxHp);
                 
                 if (this.state.player.shieldActive) {
                     elements.itemShield.classList.add('ring-2', 'ring-blue-500');
@@ -1116,4 +1138,9 @@
     </script>
 </body>
 </html>
+
+
+
+
+
 
